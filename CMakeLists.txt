@@ -139,11 +139,11 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}
-        src/localizer.cpp
-        src/localizer_node.cpp
-        include/localizer/navsat_conversions.h
-        include/localizer/localizer.h
-        include/localizer/covariance.h)
+        src/localization.cpp
+        src/localization_node.cpp
+        include/localization/navsat_conversions.h
+        include/localization/localization.h
+        include/localization/covariance.h)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
