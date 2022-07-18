@@ -1,0 +1,27 @@
+<launch>
+    <!-- Kcity -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find localizer)/map/global_map.yaml"/>
+    <!-- Ochang -->
+    <!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find localizer)/map/ochang_grid.yaml"/> -->
+
+    <node pkg="localization" name="localization" type="localization" output="screen">
+    <!-- gnss_localizer -->
+            <param name="gps_subscribe_topic_name"      value="/fix"  type="string"/>
+            <param name="gps_bestvel_subscribe_topic_name"  value="/bestvel"  type="string"/>
+            <param name="gps_bestpos_subscribe_topic_name"  value="/bestpos"  type="string"/>
+
+            <!-- Imu orientation -->
+            <param name="imu_subscribe_topic_name" value ="/vectornav/IMU" type="string"/>
+
+            <!-- Enc -->
+            <param name="Enc_Vel_subscribe_topic_name" value ="/MSG_CON/Rx_Vel" type="string"/>
+            <param name="Enc_Steer_subscribe_topic_name" value ="/MSG_CON/Rx_Steer" type="string"/>
+            <!--ochang-->
+            <!-- <param name="utmOffset_x"    value="362169.6526"  type="double"/>
+            <param name="utmOffset_y"    value="4054407.07"  type="double"/> -->
+
+            <!-- k-city -->
+            <param name="utm_x"    value="302533.174487"  type="double"/>
+            <param name="utm_y"    value="4124215.34631"  type="double"/>
+        </node>
+    </launch>
