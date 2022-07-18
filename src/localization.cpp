@@ -11,6 +11,7 @@ Localization::Localization()
     std::string imu_subscribe_topic_name;
     std::string Enc_Vel_subscribe_topic_name;
     std::string Enc_Steer_subscribe_topic_name;
+
     //launch file parameters
     pnh.param<std::string>("gps_subscribe_topic_name",gps_subscribe_topic_name,"/fix");
     pnh.param<std::string>("gps_bestvel_subscribe_topic_name",gps_bestvel_subscribe_topic_name,"/bestvel");
@@ -26,7 +27,7 @@ Localization::Localization()
 
     pubGPS_Marker = nh.advertise<visualization_msgs::Marker>("/Localization/no_filtering_marker",1);
     pubGPS_ORI = nh.advertise<nav_msgs::Odometry>("/Localization/GPS_ORI",1);
-    pubGPS_LOC = nh.advertise<geometry_msgs::PoseWithCovariance>("Localization/LocalPose",1);
+    pubGPS_LOC = nh.advertise<geometry_msgs::PoseWithCovariance>("/Localization/LocalPose",1);
 
 
     subIMU = nh.subscribe(imu_subscribe_topic_name,1,&Localization::imu_CB,this);
@@ -105,6 +106,7 @@ void Localization::gps_CB(const sensor_msgs::NavSatFix::ConstPtr &msg) {
     gps_pos.pose.position.z = 0;
     gps_pos.pose.orientation = tf2::toMsg(Q_GPS);
     pubGPS_LOC.publish(gps_pos);
+
 
 
 
