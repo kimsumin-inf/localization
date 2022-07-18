@@ -49,6 +49,10 @@ private:
     ros::NodeHandle nh;
     ros::NodeHandle pnh;
 
+    ros::Publisher pubGPS_Marker;
+    ros::Publisher pubGPS_LOC;
+    ros::Publisher pubGPS_ORI;
+
     ros::Subscriber subGPS;
     ros::Subscriber subBestVel;
     ros::Subscriber subBestPos;
@@ -65,6 +69,7 @@ private:
     std_msgs::Int16 ENC_VEL;
     std_msgs::Int16 ENC_Steer;
 
+
     struct GPS{
         enum IDX{
             X=0,
@@ -74,7 +79,7 @@ private:
         };
     };
     typedef GPS::IDX GPSIDX;
-    Eigen::MatrixXd gpsData;
+    Eigen::MatrixXd gpsData = Eigen::MatrixXd::Zero(4,1);
 
     double imu_prev;
     double imu_now;
@@ -82,6 +87,12 @@ private:
 
     double utm_x;
     double utm_y;
+
+    bool InitGPS;
+
+    int markerId;
+
+
 
 public:
     Localization();

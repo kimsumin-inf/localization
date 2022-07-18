@@ -17,8 +17,8 @@
             <param name="Enc_Vel_subscribe_topic_name" value ="/MSG_CON/Rx_Vel" type="string"/>
             <param name="Enc_Steer_subscribe_topic_name" value ="/MSG_CON/Rx_Steer" type="string"/>
             <!--ochang-->
-            <!-- <param name="utmOffset_x"    value="362169.6526"  type="double"/>
-            <param name="utmOffset_y"    value="4054407.07"  type="double"/> -->
+            <!-- <param name="utm_x"    value="362169.6526"  type="double"/>
+            <param name="utm_y"    value="4054407.07"  type="double"/> -->
 
             <!-- k-city -->
             <param name="utm_x"    value="302533.174487"  type="double"/>
