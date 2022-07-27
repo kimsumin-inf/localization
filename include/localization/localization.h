@@ -1,9 +1,5 @@
 #pragma once
 
-#include "covariance.h"
-#include "navsat_conversions.h"
-
-
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/Imu.h>
 
@@ -28,20 +24,30 @@
 
 #include <vector>
 #include <iomanip>
+#include <string>
+#include <cmath>
+
+#include "selfcar_lib/erp42.h"
+#include "selfcar_lib/kalman_filter.h"
+#include "selfcar_lib/navsat_conversions.h"
+#include "selfcar_lib/trigonometric.h"
 
 class Localization{
 private:
 
     void gps_CB(const sensor_msgs::NavSatFix::ConstPtr& msg);
+
     void bestvel_CB(const novatel_gps_msgs::NovatelVelocity::ConstPtr& msg);
     void bestpos_CB(const novatel_gps_msgs::NovatelPosition::ConstPtr& msg);
 
     void imu_CB(const sensor_msgs::Imu::ConstPtr& msg);
 
-    int encvel_Scale = 10;
-    int encsteer_Scale = 71;
-    void encvel_CB(const std_msgs::Int16::ConstPtr&msg);
-    void encSteer_CB(const std_msgs::Int16::ConstPtr&msg);
+    void initialpose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
+
+    void filter();
+    void predict();
+    void update();
+
 
 
 
@@ -59,16 +65,20 @@ private:
 
     ros::Subscriber subIMU;
 
-    ros::Subscriber subEncVel;
-    ros::Subscriber subEncSteer;
+    ros::Subscriber subInitPose;
 
+
+
+
+    /*
+     * GPS BLOCK
+     */
+
+    //DATA
     sensor_msgs::NavSatFix gps;
-    sensor_msgs::Imu imu;
+
     novatel_gps_msgs::NovatelVelocity bestVel;
     novatel_gps_msgs::NovatelPosition bestPos;
-    std_msgs::Int16 ENC_VEL;
-    std_msgs::Int16 ENC_Steer;
-
 
     struct GPS{
         enum IDX{
@@ -79,17 +89,47 @@ private:
         };
     };
     typedef GPS::IDX GPSIDX;
-    Eigen::MatrixXd gpsData = Eigen::MatrixXd::Zero(4,1);
-
-    double imu_prev;
-    double imu_now;
-    Eigen::MatrixXd NED = Eigen::MatrixXd(3,1);
-
+    Eigen::MatrixXd gpsData ;
+    Eigen::MatrixXd gpsSample;
+    Eigen::MatrixXd gpsCov;
+    int sampleNum;
     double utm_x;
     double utm_y;
 
+    //FALG
     bool InitGPS;
+    bool InitGPS_Sample;
+    bool GPS_available;
+    /*
+     * IMU BLOCK
+     */
+    // DATA
+    sensor_msgs::Imu imu;
+    double localHeading;
+    double heading;
+    double wz_dt ;
+    Eigen::MatrixXd wzdtSample;
+    Eigen::MatrixXd wzdtCov;
+    ros::Time IMU_PREV_TIME;
+    double IMU_TIME_LAPSE;
+    tf2::Quaternion qYawBias;
+    //PARAM
 
+    //FLAG
+    bool IMU_available;
+
+    /*
+     * Kalman Filter BLOCK
+     */
+
+    /*
+     * ETC
+     */
+    ERP42 erp;
+
+    /*
+     * Visualization
+     */
     int markerId;
 
 

@@ -21,7 +21,7 @@ Localization::Localization()
 
     pnh.param<std::string>("Enc_Vel_subscribe_topic_name", Enc_Vel_subscribe_topic_name, "/MSG_CON/Rx_Vel");
     pnh.param<std::string>("Enc_Steer_subscribe_topic_name", Enc_Steer_subscribe_topic_name, "/MSG_CON/Rx_Steer");
-
+    pnh.param<int>("covariance_sample_num", sampleNum, 3);
     pnh.param<double>("utm_x",utm_x,302533.174487);
     pnh.param<double>("utm_y",utm_y,4124215.34631);
 
@@ -32,12 +32,45 @@ Localization::Localization()
 
     subIMU = nh.subscribe(imu_subscribe_topic_name,1,&Localization::imu_CB,this);
 
-    subEncVel = nh.subscribe(Enc_Vel_subscribe_topic_name,1,&Localization::encvel_CB,this);
-    subEncSteer = nh.subscribe(Enc_Steer_subscribe_topic_name,1, &Localization::encSteer_CB,this);
 
+    /*
+     * GPS BLOCK
+     */
     InitGPS=true;
+    InitGPS_Sample = false;
+    gpsData = Eigen::MatrixXd::Zero(sampleNum,4);
+    gpsSample = Eigen::MatrixXd::Zero(4,1);
+    gpsCov = Eigen::MatrixXd::Zero(4,4);
 
+
+
+    /*
+     * IMU BLOCK
+     */
+
+    //DATA
+    localHeading = 0;
+    heading = 0;
+    qYawBias.setRPY(0,0,0);
+    wz_dt = 0;
+    wzdtSample = Eigen::MatrixXd(sampleNum,1);
+    wzdtCov = Eigen::MatrixXd(1,1);
+
+    //FLAG
+    IMU_available = false;
+    //
+
+    /*
+     * ETC
+     */
+
+
+
+    /*
+     * Visualization
+     */
     markerId = 0;
+
 
     cout.precision(16);
 }
@@ -55,13 +88,27 @@ void Localization::gps_CB(const sensor_msgs::NavSatFix::ConstPtr &msg) {
         gpsData(GPSIDX::YAW) = 0;
         gpsData(GPSIDX::V) = 0;
         InitGPS = false;
+        InitGPS_Sample =true;
     }
 
     double theta = std::atan2(utm_y_meas - gpsData(GPSIDX::Y), utm_x_meas - gpsData(GPSIDX::X));
+    if(erp.getState()=="BACKWARD") {
+        theta += M_PI;
+    }
     theta  = std::atan2(sin(theta), cos(theta));
     gpsData(GPSIDX::X) = utm_x_meas;
     gpsData(GPSIDX::Y) = utm_y_meas;
     gpsData(GPSIDX::YAW) = theta;
+
+    if(InitGPS_Sample)
+    {
+        gpsSample.block(0,GPSIDX::X,sampleNum,1) = Eigen::MatrixXd::Constant(sampleNum,1,gpsData(GPSIDX::X));
+        gpsSample.block(0,GPSIDX::Y,sampleNum,1) = Eigen::MatrixXd::Constant(sampleNum,1,gpsData(GPSIDX::Y));
+        gpsSample.block(0,GPSIDX::YAW,sampleNum,1) = Eigen::MatrixXd::Constant(sampleNum,1,gpsData(GPSIDX::YAW));
+        InitGPS_Sample = false;
+    }
+    Eigen::MatrixXd data = gpsData.transpose();
+    getCovariance(gpsSample, data, gpsCov);
 
     tf2::Quaternion Q_GPS;
     Q_GPS.setRPY(0,0,gpsData(GPS::YAW));
@@ -114,36 +161,29 @@ void Localization::gps_CB(const sensor_msgs::NavSatFix::ConstPtr &msg) {
 
 void Localization::bestvel_CB(const novatel_gps_msgs::NovatelVelocity::ConstPtr& msg){
     bestVel = *msg;
-    gpsData(GPSIDX::V) = sqrt(pow(bestVel.horizontal_speed,2) + pow(bestVel.vertical_speed,2));
+    double speed = sqrt(pow(bestVel.horizontal_speed,2) + pow(bestVel.vertical_speed,2));
+    gpsData(GPSIDX::V) = speed;
+    if (erp.getState()=="BACKWARD") gpsData(GPSIDX::V) = -1 * speed;
+    else if (erp.getState() =="STOP") gpsData(GPSIDX::V) = 0;
+
 
 }
 void Localization::bestpos_CB(const novatel_gps_msgs::NovatelPosition::ConstPtr &msg) {
     bestPos = *msg;
+    ROS_INFO("GPS_STATE: %s", bestPos.position_type.data());
 }
 void Localization::imu_CB(const sensor_msgs::Imu::ConstPtr &msg) {
+    ros::Time current = ros::Time::now();
+    IMU_TIME_LAPSE = current.toSec() - IMU_PREV_TIME.toSec();
+    double dt =IMU_TIME_LAPSE;
     imu = *msg;
-    imu_now = ros::Time::now().toSec();
-    double r,p,y;
-    tf::Quaternion rpy;
-    tf::quaternionMsgToTF(imu.orientation, rpy);
-    tf::Matrix3x3(rpy).getRPY(r,p,y);
-    //y-=1.58;
 
-    NED(0,0) = (ENC_VEL.data/encvel_Scale) * cos(r);
-    NED(1,0) = (ENC_VEL.data/encvel_Scale) * sin(r);
-    NED(2,0) = 0;
-    double dt = double(imu_now-imu_prev);
+    localHeading = normalize(localHeading + imu.angular_velocity.z * dt);
+    wz_dt = normalize(wz_dt + imu.angular_velocity.z *dt);
 
-
-    imu_prev = imu_now;
-
-}
-void Localization::encvel_CB(const std_msgs::Int16::ConstPtr &msg) {
-    ENC_VEL = *msg;
-    //cout << ENC_VEL.data/encvel_Scale <<endl;
-}
-void Localization::encSteer_CB(const std_msgs::Int16::ConstPtr &msg) {
-    ENC_Steer = *msg;
-    //cout << ENC_Steer.data/encsteer_Scale<<endl;
-
+    Eigen::MatrixXd data = Eigen::MatrixXd::Zero(1,1);
+    data <<wz_dt;
+    updateSample(wzdtSample, data);
+    IMU_PREV_TIME = current;
+    IMU_available = true;
 }

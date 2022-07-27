@@ -12,7 +12,8 @@
 
             <!-- Imu orientation -->
             <param name="imu_subscribe_topic_name" value ="/vectornav/IMU" type="string"/>
-
+            <param name="initialpose_topoc_name"  value="/initialpose"  type="string"/>
+            <param name="covariance_sample_num"         value="25"         type="int"/>
             <!-- Enc -->
             <param name="Enc_Vel_subscribe_topic_name" value ="/MSG_CON/Rx_Vel" type="string"/>
             <param name="Enc_Steer_subscribe_topic_name" value ="/MSG_CON/Rx_Steer" type="string"/>

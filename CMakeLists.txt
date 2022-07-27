@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf2
   tf2_ros
+        selfcar_lib
 )
 
 ## System dependencies are found with CMake's conventions
